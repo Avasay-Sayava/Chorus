@@ -83,11 +83,15 @@ PlasmoidItem {
     readonly property bool hasTrack:  playerMatches && trackTitle !== ""
 
     property var optimistic: null
+    property var pendingSpotifyTrack: null
     Timer {
         id: optimisticTimeout
         interval: 12000
         repeat: false
-        onTriggered: root.optimistic = null
+        onTriggered: {
+            root.optimistic = null;
+            root.pendingSpotifyTrack = null;
+        }
     }
     Timer {
         id: optSettle
@@ -123,7 +127,11 @@ PlasmoidItem {
     }
     onRawTitleChanged:  metaGate()
     onRawArtistChanged: metaGate()
-    onRawAlbumChanged:  metaGate()
+    onRawAlbumChanged: {
+        metaGate();
+        if (trackTitle !== "" && (lyricsFetchTimer.running || (!haveSynced && !fetching)))
+            lyricsFetchTimer.restart();
+    }
     onRawArtChanged:    metaGate()
     function metaGate() {
         if (heldTrack !== null) {
@@ -158,6 +166,10 @@ PlasmoidItem {
         if (rawLengthMs > 0) stickyLengthMs = rawLengthMs;
         metaGate();
         safeCall(["updatePosition"]);
+        if (trackTitle !== "" && (lyricsFetchTimer.running || (!haveSynced && !fetching)
+                || (rawLengthMs > 0 && lastFetchedDurS === 0)
+                || (rawLengthMs > 0 && lastFetchedDurS > 0 && Math.abs(Math.round(rawLengthMs / 1000) - lastFetchedDurS) > 2)))
+            lyricsFetchTimer.restart();
     }
     readonly property double playRate:    (playerMatches && player.rate && player.rate > 0) ? player.rate : 1.0
     readonly property bool winVisible: Window.visibility !== Window.Hidden && Window.visibility !== 0
@@ -195,7 +207,7 @@ PlasmoidItem {
         interval: 150
         repeat: true
         property int ticks: 999
-        running: root.isPlaying && root.winVisible && root.haveSynced && root.trustPos && ticks < 14
+        running: root.isPlaying && root.winVisible && root.trustPos && ticks < 14
         onTriggered: {
             ticks++;
             root.safeCall(["updatePosition"]);
@@ -231,11 +243,18 @@ PlasmoidItem {
                     root.resync();
                     return;
                 }
+                if (root.lastReported < 0 && Math.abs(diff) >= 120 && reported >= 0
+                        && !(reported < 2000 && predicted > 3000)) {
+                    root.posMs = reported;
+                    root.posStamp = Date.now();
+                    root.uiPosMs = root.nowMs();
+                    root.resync();
+                }
                 root.lastReported = reported;
                 return;
             }
             root.lastReported = reported;
-            if (root.isPlaying && Math.abs(diff) < 750) {
+            if (root.isPlaying && Math.abs(diff) < 120) {
                 return;
             }
             if (root.isPlaying && diff < -2000 && reported < 2000 && predicted > 3000) {
@@ -278,16 +297,57 @@ PlasmoidItem {
     property var cache: ({})
     property var cacheKeys: []
     property bool fetching: false
+    property string spotifyTrackId: ""
+    property int fetchGen: 0
+    property int lastFetchedDurS: -1
+    property string lastFetchedProvider: ""
+    property string memMxmToken: ""
+    readonly property string mxmUa: "Musixmatch/2024.06.01 (Android; 14)"
+    readonly property string mxmCookieFile: "/tmp/chorus-mxm-cookies.txt"
+
+    readonly property string lyricsProviderMode: Plasmoid.configuration.lyricsProvider || "auto"
+    onLyricsProviderModeChanged: {
+        if (lastFetchedProvider !== "" && lastFetchedProvider !== lyricsProviderMode && trackTitle !== "") {
+            cache = ({});
+            cacheKeys = [];
+            lyricsFetchTimer.restart();
+        }
+    }
+    readonly property string customMxmToken: (Plasmoid.configuration.musixmatchUserToken || "").trim()
+    onCustomMxmTokenChanged: {
+        if (lastFetchedProvider !== "" && lyricsProviderMode !== "lrclib" && trackTitle !== "") {
+            cache = ({});
+            cacheKeys = [];
+            lyricsFetchTimer.restart();
+        }
+    }
 
     signal lyricsResynced()
 
+    Timer {
+        id: lyricsFetchTimer
+        interval: 75
+        repeat: false
+        onTriggered: root.fetchLyrics()
+    }
+
     readonly property string songKey: trackTitle + "\u0001" + trackArtist
     onSongKeyChanged: {
+        fetchGen++;
         fetching = false;
+        spotifyTrackId = "";
+        lastFetchedDurS = -1;
         badReports = 0;
         backProbeVal = -1;
-        stickyLengthMs = rawLengthMs > 0 ? rawLengthMs : 0;
-        if (trackTitle !== "") { optimistic = null; optimisticTimeout.stop(); }
+        stickyLengthMs = 0;
+        if (trackTitle !== "") {
+            if (pendingSpotifyTrack && pendingSpotifyTrack.title === trackTitle.trim().toLowerCase())
+                spotifyTrackId = pendingSpotifyTrack.id;
+            else
+                pendingSpotifyTrack = null;
+            optimistic = null;
+            optimisticTimeout.stop();
+        }
         lines = [];
         lineIdx = -1;
         if (trackTitle !== "") {
@@ -295,13 +355,22 @@ PlasmoidItem {
             posStamp = Date.now();
             uiPosMs = 0;
             seekStamp = 0;
-            fetchLyrics();
+            lyricsFetchTimer.restart();
             startCalibration();
             safeCall(["updatePosition"]);
         } else {
+            lyricsFetchTimer.stop();
             posMs = 0;
             uiPosMs = 0;
         }
+    }
+
+    function shQuote(s) {
+        return "'" + String(s).replace(/'/g, "'\\''") + "'";
+    }
+
+    function encQ(s) {
+        return encodeURIComponent(String(s || "")).replace(/'/g, "%27");
     }
 
     function httpGet(url, cb) {
@@ -320,8 +389,26 @@ PlasmoidItem {
         xhr.timeout = 10000;
         xhr.ontimeout = function () { finish(false, ""); };
         xhr.open("GET", url);
-        xhr.setRequestHeader("Lrclib-Client", "Chorus/1.0 (Plasma widget)");
+        if (url.indexOf("lrclib.net") !== -1)
+            xhr.setRequestHeader("Lrclib-Client", "Chorus/1.0 (Plasma widget)");
         xhr.send();
+    }
+
+    function curlGet(url, ua, cookieFile, cb) {
+        var cmd = "curl -sL --max-time 8";
+        if (ua && ua !== "") cmd += " -A " + shQuote(ua);
+        if (cookieFile && cookieFile !== "")
+            cmd += " -b " + shQuote(cookieFile) + " -c " + shQuote(cookieFile);
+        cmd += " " + shQuote(url) + " 2>/dev/null";
+        runCmdWatch(cmd, function (out) {
+            if (out && out.trim() !== "") {
+                cb(out);
+                return;
+            }
+            httpGet(url, function (ok, body) {
+                cb(ok ? (body || "") : "");
+            });
+        });
     }
 
     function rememberCache(key, val) {
@@ -335,54 +422,233 @@ PlasmoidItem {
         cache[key] = val;
     }
 
-    function fetchLyrics() {
-        var key = songKey;
-        if (cache[key] !== undefined) {
-            applyLyrics(cache[key]);
+    function ensureMxmToken(forceRefresh, cb) {
+        var custom = (Plasmoid.configuration.musixmatchUserToken || "").trim();
+        if (Lrc.isValidMxmToken(custom)) {
+            cb(custom);
             return;
         }
-        fetching = true;
-        var durS = Math.round(lengthMs / 1000);
-        var url = "https://lrclib.net/api/get?track_name=" + encodeURIComponent(trackTitle)
-                + "&artist_name=" + encodeURIComponent(trackArtist);
-        if (trackAlbum !== "") url += "&album_name=" + encodeURIComponent(trackAlbum);
+        if (forceRefresh) {
+            memMxmToken = "";
+            Plasmoid.configuration.musixmatchAutoToken = "";
+        } else {
+            var cachedTok = (Plasmoid.configuration.musixmatchAutoToken || memMxmToken || "").trim();
+            if (Lrc.isValidMxmToken(cachedTok)) {
+                cb(cachedTok);
+                return;
+            }
+        }
+        var tokUrl = "https://apic.musixmatch.com/ws/1.1/token.get?app_id=android-player-v1.0&format=json";
+        curlGet(tokUrl, mxmUa, mxmCookieFile, function (resp) {
+            var tok = Lrc.parseMxmToken(resp);
+            if (Lrc.isValidMxmToken(tok)) {
+                root.memMxmToken = tok;
+                Plasmoid.configuration.musixmatchAutoToken = tok;
+                cb(tok);
+            } else {
+                cb("");
+            }
+        });
+    }
+
+    function fetchFromMusixmatch(key, gen, title, artist, album, durS, spId, retried, cb) {
+        ensureMxmToken(retried, function (tok) {
+            if (root.fetchGen !== gen || root.songKey !== key) return;
+            if (!Lrc.isValidMxmToken(tok)) {
+                cb(null);
+                return;
+            }
+            var url = "https://apic.musixmatch.com/ws/1.1/macro.subtitles.get"
+                    + "?format=json"
+                    + "&namespace=lyrics_richsynched"
+                    + "&subtitle_format=lrc"
+                    + "&app_id=android-player-v1.0"
+                    + "&optional_calls=track.richsync"
+                    + "&q_track=" + encQ(title)
+                    + "&q_artist=" + encQ(artist);
+            if (album !== "") url += "&q_album=" + encQ(album);
+            if (durS > 0) url += "&q_duration=" + durS + "&f_subtitle_length=" + durS + "&f_subtitle_length_max_deviation=15";
+            if (spId !== "") url += "&track_spotify_id=" + encQ(spId);
+            url += "&usertoken=" + encQ(tok);
+
+            curlGet(url, root.mxmUa, root.mxmCookieFile, function (resp) {
+                if (root.fetchGen !== gen || root.songKey !== key) return;
+                var res = Lrc.parseMxmMacro(resp, title, durS);
+                var hasCustom = Lrc.isValidMxmToken((Plasmoid.configuration.musixmatchUserToken || "").trim());
+                if ((res.status === 401 || res.status === 402 || res.hint === "renew" || res.decoy)
+                        && !retried && !hasCustom) {
+                    root.fetchFromMusixmatch(key, gen, title, artist, album, durS, spId, true, cb);
+                    return;
+                }
+                if (res.lrc) {
+                    cb(res.lrc);
+                    return;
+                }
+                var cTitle = Lrc.cleanTrackTitle(title);
+                var pArtist = Lrc.primaryArtist(artist);
+                var sUrl = "https://apic.musixmatch.com/ws/1.1/track.search"
+                         + "?format=json"
+                         + "&app_id=android-player-v1.0"
+                         + "&f_has_subtitle=1"
+                         + "&page_size=10"
+                         + "&q_track=" + encQ(cTitle !== "" ? cTitle : title)
+                         + "&q_artist=" + encQ(pArtist !== "" ? pArtist : artist)
+                         + "&usertoken=" + encQ(tok);
+                curlGet(sUrl, root.mxmUa, root.mxmCookieFile, function (resp2) {
+                    if (root.fetchGen !== gen || root.songKey !== key) return;
+                    var bestTrack = Lrc.pickBestMxmTrack(resp2, durS);
+                    if (!bestTrack || !bestTrack.commontrack_id) {
+                        cb(null);
+                        return;
+                    }
+                    var subUrl = "https://apic.musixmatch.com/ws/1.1/track.subtitle.get"
+                               + "?format=json"
+                               + "&app_id=android-player-v1.0"
+                               + "&subtitle_format=lrc"
+                               + "&commontrack_id=" + encQ(bestTrack.commontrack_id)
+                               + "&usertoken=" + encQ(tok);
+                    curlGet(subUrl, root.mxmUa, root.mxmCookieFile, function (resp3) {
+                        if (root.fetchGen !== gen || root.songKey !== key) return;
+                        cb(Lrc.parseMxmSubtitle(resp3));
+                    });
+                });
+            });
+        });
+    }
+
+    function fetchFromLrclib(key, gen, title, artist, album, durS, cb) {
+        var url = "https://lrclib.net/api/get?track_name=" + encQ(title)
+                + "&artist_name=" + encQ(artist);
+        if (album !== "") url += "&album_name=" + encQ(album);
         if (durS > 0) url += "&duration=" + durS;
 
         httpGet(url, function (ok, resp) {
-            if (root.songKey !== key) return;
+            if (root.fetchGen !== gen || root.songKey !== key) return;
             var synced = null;
             if (ok) {
-                try { synced = JSON.parse(resp).syncedLyrics || null; } catch (e) {}
+                try {
+                    var obj = JSON.parse(resp);
+                    if (obj && obj.syncedLyrics && Lrc.parse(obj.syncedLyrics).length > 0) {
+                        var oDur = Number(obj.duration || 0);
+                        if (durS <= 0 || oDur <= 0 || Math.abs(oDur - durS) <= 15)
+                            synced = obj.syncedLyrics;
+                    }
+                } catch (e) {}
             }
             if (synced) {
-                root.fetching = false;
-                root.rememberCache(key, synced);
-                root.applyLyrics(synced);
-            } else {
-                root.httpGet("https://lrclib.net/api/search?track_name=" + encodeURIComponent(root.trackTitle)
-                             + "&artist_name=" + encodeURIComponent(root.trackArtist),
-                    function (ok2, resp2) {
-                        if (root.songKey !== key) return;
-                        root.fetching = false;
-                        var s2 = null;
-                        if (ok2) {
-                            try {
-                                var arr = JSON.parse(resp2);
-                                for (var i = 0; i < arr.length; i++) {
-                                    if (arr[i].syncedLyrics) { s2 = arr[i].syncedLyrics; break; }
-                                }
-                            } catch (e) {}
-                        }
-                        root.rememberCache(key, s2);
-                        root.applyLyrics(s2);
-                    });
+                cb(synced);
+                return;
             }
+            var searchUrl = "https://lrclib.net/api/search?track_name=" + encQ(title)
+                          + "&artist_name=" + encQ(artist);
+            root.httpGet(searchUrl, function (ok2, resp2) {
+                if (root.fetchGen !== gen || root.songKey !== key) return;
+                var s2 = ok2 ? Lrc.pickBestLrclibSearch(resp2, title, artist, album, durS) : null;
+                if (s2) {
+                    cb(s2);
+                    return;
+                }
+                var cTitle = Lrc.cleanTrackTitle(title);
+                var pArtist = Lrc.primaryArtist(artist);
+                if (cTitle === title && pArtist === artist) {
+                    cb(null);
+                    return;
+                }
+                var searchUrl2 = "https://lrclib.net/api/search?track_name=" + encQ(cTitle || title)
+                               + "&artist_name=" + encQ(pArtist || artist);
+                root.httpGet(searchUrl2, function (ok3, resp3) {
+                    if (root.fetchGen !== gen || root.songKey !== key) return;
+                    var s3 = ok3 ? Lrc.pickBestLrclibSearch(resp3, cTitle || title, pArtist || artist, album, durS) : null;
+                    cb(s3);
+                });
+            });
         });
+    }
+
+    function fetchSpotifyTrackId(key, gen, cb) {
+        if (spotifyTrackId !== "") {
+            cb(spotifyTrackId);
+            return;
+        }
+        if (!currentPlayerIs("spotify")) {
+            cb("");
+            return;
+        }
+        runCmdWatch("gdbus call --session --dest org.mpris.MediaPlayer2.spotify --object-path /org/mpris/MediaPlayer2 --method org.freedesktop.DBus.Properties.Get org.mpris.MediaPlayer2.Player Metadata 2>/dev/null",
+            function (out) {
+                if (root.fetchGen !== gen || root.songKey !== key) return;
+                var id = Lrc.extractSpotifyTrackId(out);
+                if (id !== "") root.spotifyTrackId = id;
+                cb(id);
+            });
+    }
+
+    function fetchLyrics() {
+        var key = songKey;
+        var title = trackTitle;
+        var artist = trackArtist;
+        var album = trackAlbum;
+        if (title === "") {
+            fetching = false;
+            return;
+        }
+        pendingSpotifyTrack = null;
+        var durS = lengthMs > 0 ? Math.round(lengthMs / 1000) : 0;
+        lastFetchedDurS = durS;
+        var provider = lyricsProviderMode;
+        if (provider !== "auto" && provider !== "musixmatch" && provider !== "lrclib")
+            provider = "auto";
+        lastFetchedProvider = provider;
+
+        var cKey = key + "\u0001" + durS;
+        if (cache[cKey]) {
+            fetching = false;
+            applyLyrics(cache[cKey]);
+            return;
+        }
+
+        var gen = ++fetchGen;
+        fetching = true;
+
+        function finish(lrc) {
+            if (root.fetchGen !== gen || root.songKey !== key) return;
+            root.fetching = false;
+            if (lrc) root.rememberCache(cKey, lrc);
+            root.applyLyrics(lrc);
+        }
+
+        if (provider === "lrclib") {
+            fetchFromLrclib(key, gen, title, artist, album, durS, function (lrc1) {
+                if (root.fetchGen !== gen || root.songKey !== key) return;
+                if (lrc1) {
+                    finish(lrc1);
+                    return;
+                }
+                fetchSpotifyTrackId(key, gen, function (spId) {
+                    if (root.fetchGen !== gen || root.songKey !== key) return;
+                    fetchFromMusixmatch(key, gen, title, artist, album, durS, spId, false, finish);
+                });
+            });
+        } else {
+            fetchSpotifyTrackId(key, gen, function (spId) {
+                if (root.fetchGen !== gen || root.songKey !== key) return;
+                fetchFromMusixmatch(key, gen, title, artist, album, durS, spId, false, function (lrc1) {
+                    if (root.fetchGen !== gen || root.songKey !== key) return;
+                    if (lrc1) {
+                        finish(lrc1);
+                        return;
+                    }
+                    fetchFromLrclib(key, gen, title, artist, album, durS, finish);
+                });
+            });
+        }
     }
 
     function applyLyrics(lrc) {
         lines = lrc ? Lrc.parse(lrc) : [];
         resync();
+        safeCall(["updatePosition"]);
+        if (isPlaying) startCalibration();
     }
 
     function resync() {
@@ -416,9 +682,9 @@ PlasmoidItem {
 
     Timer {
         id: driftTimer
-        interval: 3000
+        interval: 1500
         repeat: true
-        running: root.isPlaying && root.winVisible && root.haveSynced && root.trustPos
+        running: root.isPlaying && root.winVisible && root.trustPos
         onTriggered: root.safeCall(["updatePosition"])
     }
 
@@ -596,11 +862,22 @@ PlasmoidItem {
 
     readonly property var spotifyApi: spotifyApiLoader.item
 
-    function showOptimistic(o) { optimistic = o; optimisticTimeout.restart(); }
+    function showOptimistic(o) {
+        optimistic = o;
+        optimisticTimeout.restart();
+        pendingSpotifyTrack = (o && o.id)
+            ? { id: String(o.id), title: String(o.title || "").trim().toLowerCase() }
+            : null;
+    }
     function settleOptimistic() { optSettle.restart(); }
     function runCmd(sh) { exec.connectSource(sh); }
+    property int cmdSeq: 0
     property var cmdCallbacks: ({})
-    function runCmdWatch(sh, cb) { cmdCallbacks[sh] = cb; exec.connectSource(sh); }
+    function runCmdWatch(sh, cb) {
+        var key = sh + " # " + (++cmdSeq);
+        cmdCallbacks[key] = cb;
+        exec.connectSource(key);
+    }
 
     readonly property bool shuffleOn: pearIsCurrent ? pear.shuffleOn : false
     readonly property string repeatMode: pearIsCurrent ? pear.repeatMode : "NONE"
@@ -1180,7 +1457,7 @@ PlasmoidItem {
                 readonly property bool showLyric: root.haveSynced && root.lineIdx >= 0
                                                   && root.lineIdx < root.lines.length && root.isPlaying
                 text: showLyric ? (root.lines[root.lineIdx].text || "♪")
-                    : (root.isActive && !root.haveSynced && !root.fetching ? i18n("No synced lyrics found") : " ")
+                    : (root.isActive && !root.haveSynced && !root.fetching && !lyricsFetchTimer.running ? i18n("No synced lyrics found") : " ")
                 font.family: root.cfgFont
                 fontCss: root.cfgFontCss
                 font.italic: showLyric

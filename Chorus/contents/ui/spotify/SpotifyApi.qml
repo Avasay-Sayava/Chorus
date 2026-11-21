@@ -138,7 +138,7 @@ Item {
         if (!item || !/^[0-9A-Za-z]{10,40}$/.test(item.id || "")) return;
         var uri = "spotify:track:" + item.id;
         // preview song's title and thumbnail before the song actually plays
-        root.showOptimistic({ title: item.title || "", artist: item.subtitle || "", art: item.art || "" });
+        root.showOptimistic({ id: item.id, title: item.title || "", artist: item.subtitle || "", art: item.art || "" });
         if (root.searchAppRunning) {
             if (!(root.currentPlayerIs("spotify") && root.safeCall(["openUri", "OpenUri"], uri)))
                 root.runCmd("gdbus call --session --dest org.mpris.MediaPlayer2.spotify"

@@ -92,5 +92,14 @@
     <entry name="apiUrl" type="String">
       <default>http://127.0.0.1:26538</default>
     </entry>
+    <entry name="lyricsProvider" type="String">
+      <default>auto</default>
+    </entry>
+    <entry name="musixmatchUserToken" type="String">
+      <default></default>
+    </entry>
+    <entry name="musixmatchAutoToken" type="String">
+      <default></default>
+    </entry>
   </group>
 </kcfg>

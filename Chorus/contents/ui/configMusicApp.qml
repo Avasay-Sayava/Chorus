@@ -9,6 +9,8 @@ KCM.SimpleKCM {
 
     property string cfg_appMode
     property string cfg_searchMode
+    property string cfg_lyricsProvider
+    property alias cfg_musixmatchUserToken: mxmTokenField.text
     property alias cfg_playerMatch: matchField.text
     property alias cfg_preferSongs: preferSongsCheck.checked
     property alias cfg_apiUrl: apiUrlField.text
@@ -25,6 +27,12 @@ KCM.SimpleKCM {
 
     readonly property var appModes: ["universal", "custom"]
     readonly property var searchModes: ["none", "auto", "pear", "spotify"]
+    readonly property var lyricsProviders: ["auto", "musixmatch", "lrclib"]
+    onCfg_lyricsProviderChanged: {
+        var i = lyricsProviders.indexOf(cfg_lyricsProvider);
+        if (i >= 0 && lyricsProviderCombo.currentIndex !== i)
+            lyricsProviderCombo.currentIndex = i;
+    }
     readonly property bool autoSearch: searchCombo.currentIndex === 1
     readonly property bool pearSearch: searchCombo.currentIndex === 2
     readonly property bool spotifySearch: searchCombo.currentIndex === 3
@@ -54,6 +62,32 @@ KCM.SimpleKCM {
             Kirigami.FormData.label: i18n("App name or class:")
             visible: appModeCombo.currentIndex === 1
             placeholderText: i18n("e.g. spotify, org.kde.elisa. Separate several with commas")
+            Layout.maximumWidth: page.fieldWidth
+        }
+
+        Item {
+            Kirigami.FormData.isSection: true
+            Kirigami.FormData.label: i18n("Lyrics")
+        }
+        QQC2.ComboBox {
+            id: lyricsProviderCombo
+            Kirigami.FormData.label: i18n("Lyrics source:")
+            model: [
+                i18n("Automatic (Spotify / Musixmatch, then LRCLIB)"),
+                i18n("Musixmatch (Spotify provider)"),
+                i18n("LRCLIB")
+            ]
+            onActivated: page.cfg_lyricsProvider = page.lyricsProviders[currentIndex]
+            Component.onCompleted: {
+                var i = page.lyricsProviders.indexOf(page.cfg_lyricsProvider);
+                if (i < 0) { i = 0; page.cfg_lyricsProvider = page.lyricsProviders[0]; }
+                currentIndex = i;
+            }
+        }
+        QQC2.TextField {
+            id: mxmTokenField
+            Kirigami.FormData.label: i18n("Musixmatch token (optional):")
+            placeholderText: i18n("Leave empty to fetch automatically")
             Layout.maximumWidth: page.fieldWidth
         }
 
