@@ -11,9 +11,9 @@
         "Category": "Multimedia",
         "Description": "Music bar with synced lyrics, built-in YouTube Music and Spotify search, and media controls.",
         "Icon": "/icon.png",
-        "Id": "net.netherizzium.chorus",
+        "Id": "net.netherizzium.chorus-custom",
         "License": "GPL3",
-        "Name": "Chorus",
+        "Name": "Chorus (Custom)",
         "Version": "2.11.1",
         "Website": "https://github.com/Netherizzium/chorus"
     },
