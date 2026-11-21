@@ -1012,6 +1012,9 @@ PlasmoidItem {
     }
     readonly property color cActive: Plasmoid.configuration.activeColor
     readonly property color cInactive: Qt.alpha(cActive, 0.55)
+    readonly property color cThemeBg: Kirigami.Theme.backgroundColor
+    readonly property color cThemeAccent: Kirigami.Theme.highlightColor
+    readonly property color cThemeText: Kirigami.Theme.textColor
 
     compactRepresentation: Item {
         id: bar
@@ -1401,30 +1404,37 @@ PlasmoidItem {
                     NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
                 }
 
+                Image {
+                    id: coverGlowSrc
+                    width: bigCover.width
+                    height: bigCover.height
+                    source: bigCover.effSrc
+                    sourceSize: Qt.size(128, 128)
+                    fillMode: Image.PreserveAspectCrop
+                    asynchronous: true
+                    visible: false
+                }
+
                 MultiEffect {
-                    anchors.fill: bigCover
-                    source: bigCover
-                    visible: bigCover.visible
+                    z: -1
+                    anchors.centerIn: bigCover
+                    width: bigCover.width
+                    height: bigCover.height
+                    source: coverGlowSrc
+                    visible: bigCover.visible && coverGlowSrc.status === Image.Ready
                     autoPaddingEnabled: true
                     blurEnabled: true
                     blurMax: 44
                     blur: 1.0
                     saturation: 0.35
+                    shadowEnabled: true
+                    shadowBlur: 0.85
+                    shadowVerticalOffset: 6
+                    shadowColor: root.cThemeBg
                     opacity: coverMouse.containsMouse ? 0.48 : 0.36
                     Behavior on opacity {
                         NumberAnimation { duration: 220; easing.type: Easing.OutQuad }
                     }
-                }
-
-                MultiEffect {
-                    anchors.fill: bigCover
-                    source: bigCover
-                    visible: bigCover.visible
-                    autoPaddingEnabled: true
-                    shadowEnabled: true
-                    shadowBlur: 0.85
-                    shadowVerticalOffset: 6
-                    shadowColor: Qt.rgba(0, 0, 0, 0.52)
                 }
 
                 CoverImage {
@@ -1433,7 +1443,6 @@ PlasmoidItem {
                     src: root.dispArt
                     px: 512
                     radius: 12
-                    layer.enabled: true
                     visible: root.dispArt != "" && !bigCover.failed
                 }
                 Rectangle {
@@ -1441,7 +1450,7 @@ PlasmoidItem {
                     radius: 12
                     color: "transparent"
                     border.width: 1
-                    border.color: Qt.alpha(root.cActive, 0.14)
+                    border.color: Qt.alpha(root.cThemeAccent, 0.35)
                     visible: bigCover.visible
                 }
                 Kirigami.Icon {
@@ -1477,9 +1486,9 @@ PlasmoidItem {
                                     parent.width - Kirigami.Units.largeSpacing)
                     height: openHintLabel.implicitHeight + Kirigami.Units.smallSpacing * 1.4
                     radius: height / 2
-                    color: Qt.rgba(0.10, 0.10, 0.10, 0.78)
+                    color: Qt.alpha(root.cThemeBg, 0.82)
                     border.width: 1
-                    border.color: Qt.alpha(root.cActive, 0.18)
+                    border.color: Qt.alpha(root.cThemeAccent, 0.45)
                     opacity: coverMouse.containsMouse && volOverlay.opacity === 0 ? 1.0 : 0.0
                     Behavior on opacity { NumberAnimation { duration: 150 } }
 
@@ -1493,7 +1502,7 @@ PlasmoidItem {
                         elide: Text.ElideRight
                         horizontalAlignment: Text.AlignHCenter
                         verticalAlignment: Text.AlignVCenter
-                        color: root.cActive
+                        color: root.cThemeText
                         font.family: root.cfgFont
                         font.pixelSize: Kirigami.Theme.smallFont.pixelSize
                         font.weight: Font.Medium
@@ -1503,7 +1512,9 @@ PlasmoidItem {
                     id: volOverlay
                     anchors.fill: parent
                     radius: 12
-                    color: Qt.rgba(0.15, 0.15, 0.15, 0.72)
+                    color: Qt.alpha(root.cThemeBg, 0.82)
+                    border.width: 1
+                    border.color: Qt.alpha(root.cThemeAccent, 0.35)
                     opacity: 0
                     function show() { opacity = 1; volHide.restart(); }
                     Behavior on opacity { NumberAnimation { duration: 150 } }
@@ -1513,7 +1524,7 @@ PlasmoidItem {
                         anchors.centerIn: parent
                         text: root.playerMatches && root.player.volume !== undefined
                               ? Math.round(root.player.volume * 100) + "%" : ""
-                        color: root.cActive
+                        color: root.cThemeText
                         font.family: root.cfgFont
                         font.pixelSize: Kirigami.Units.gridUnit * 2.4
                         font.weight: Font.DemiBold
