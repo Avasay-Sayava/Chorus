@@ -110,6 +110,12 @@
     <entry name="showCover" type="Bool">
       <default>true</default>
     </entry>
+    <entry name="showBarControls" type="Bool">
+      <default>true</default>
+    </entry>
+    <entry name="showBarProgress" type="Bool">
+      <default>true</default>
+    </entry>
     <entry name="apiUrl" type="String">
       <default>http://127.0.0.1:26538</default>
     </entry>

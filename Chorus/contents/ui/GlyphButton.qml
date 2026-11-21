@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import org.kde.kirigami as Kirigami
 import org.kde.plasma.components as PC3
 
 // Shuffle and repeat button
@@ -11,13 +12,29 @@ PC3.ToolButton {
     property color glyphColor: "white"
     property bool active: false
 
+    hoverEnabled: true
     Layout.preferredWidth: size
     Layout.preferredHeight: size
+
+    background: Rectangle {
+        anchors.centerIn: parent
+        width: btn.size * 0.88
+        height: width
+        radius: width / 2
+        color: Qt.alpha(Kirigami.Theme.highlightColor,
+                        btn.down ? 0.38 : (btn.hovered && btn.enabled ? 0.24 : (btn.active ? 0.14 : 0.0)))
+        border.width: ((btn.hovered || btn.down) && btn.enabled) || btn.active ? 1 : 0
+        border.color: Qt.alpha(Kirigami.Theme.highlightColor,
+                               btn.down ? 0.52 : (btn.hovered ? 0.36 : 0.26))
+        Behavior on color { ColorAnimation { duration: 140 } }
+    }
 
     contentItem: Item {
         implicitWidth: btn.size
         implicitHeight: btn.size
         opacity: btn.enabled ? (btn.active ? 1.0 : 0.55) : 0.3
+        scale: btn.down ? 0.90 : (btn.hovered && btn.enabled ? 1.05 : 1.0)
+        Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
 
         Canvas {
             id: cv

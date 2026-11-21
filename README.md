@@ -29,3 +29,7 @@ Forked from [Netherizzium/Chorus](https://github.com/Netherizzium/Chorus).
   - Wrapped the volume slider in a wider theme-tinted glassy pill with a clickable mute/unmute speaker icon and matching animated thumb/track styling.
 - **Toggleable Popup Elements** (*Look & Feel* settings):
   - Added individual toggles under **Popup elements** to show or hide the album cover, track title, artist, album name, synced lyrics pill (disabled by default), progress / seek bar, playback controls, and volume slider.
+- **Panel Bar Polish & Toggleable Panel Elements**:
+  - Added circular theme-tinted hover/press highlights (`Kirigami.Theme.highlightColor`) and subtle scale feedback to playback buttons (`SkipButton`, `PlayButton`, `GlyphButton`).
+  - Added a 1px theme-accent rim on the panel cover art, shorter rounded theme-tinted vertical dividers, and a 2px bottom progress hairline (`barProgressTrack`) driven by a `root`-level timer so it stays updated before opening the popup.
+  - Added **Panel elements** toggles under *Look & Feel* (`Show album cover`, `Show playback controls`, `Show bottom progress line`).

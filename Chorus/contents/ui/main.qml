@@ -688,6 +688,17 @@ PlasmoidItem {
         onTriggered: root.safeCall(["updatePosition"])
     }
 
+    Timer {
+        id: uiPosTimer
+        interval: 500
+        repeat: true
+        running: (root.expanded || (Plasmoid.configuration.showBarProgress && root.winVisible)) && root.isPlaying
+        onTriggered: {
+            root.uiPosMs = root.nowMs();
+            if (!root.haveSynced) root.safeCall(["updatePosition"]);
+        }
+    }
+
     onWinVisibleChanged: {
         if (winVisible && isActive) {
             safeCall(["updatePosition"]);
@@ -1075,7 +1086,8 @@ PlasmoidItem {
         readonly property real coverSize: Math.round(thick * 0.80)
         readonly property real minTotalW: screenLen * Plasmoid.configuration.minFrac
         readonly property real lyricsMaxW: Math.max(80, screenLen * Plasmoid.configuration.maxFrac
-                                                    - coverSize - buttonsRow.width - 8 * pad)
+                                                    - (coverBox.visible ? coverSize : 0)
+                                                    - (buttonsRow.visible ? buttonsRow.width : 0) - 8 * pad)
         readonly property int lyricPx: Math.max(10, Math.round(thick * 0.46 * Plasmoid.configuration.fontScale))
 
         readonly property real liveLen: shown ? Math.max(row.implicitWidth, minTotalW) : 0
@@ -1192,6 +1204,14 @@ PlasmoidItem {
                     radius: Math.max(3, bar.coverSize * 0.14)
                     visible: root.dispArt != "" && !coverImg.failed
                 }
+                Rectangle {
+                    anchors.fill: coverImg
+                    radius: coverImg.radius
+                    color: "transparent"
+                    border.width: 1
+                    border.color: Qt.alpha(root.cThemeAccent, 0.32)
+                    visible: coverImg.visible
+                }
                 Kirigami.Icon {
                     anchors.fill: parent
                     anchors.margins: 3
@@ -1203,11 +1223,12 @@ PlasmoidItem {
             }
 
             Rectangle {
+                visible: coverBox.visible
                 Layout.preferredWidth: 1
-                Layout.preferredHeight: bar.thick * 0.55
+                Layout.preferredHeight: Math.round(bar.thick * 0.42)
                 Layout.alignment: Qt.AlignVCenter
-                color: root.cActive
-                opacity: 0.25
+                radius: 0.5
+                color: Qt.alpha(root.cThemeAccent, 0.35)
             }
 
             Item { Layout.fillWidth: true; Layout.preferredWidth: bar.pad }
@@ -1313,15 +1334,17 @@ PlasmoidItem {
             Item { Layout.fillWidth: true; Layout.preferredWidth: bar.pad }
 
             Rectangle {
+                visible: buttonsRow.visible
                 Layout.preferredWidth: 1
-                Layout.preferredHeight: bar.thick * 0.55
+                Layout.preferredHeight: Math.round(bar.thick * 0.42)
                 Layout.alignment: Qt.AlignVCenter
-                color: root.cActive
-                opacity: 0.25
+                radius: 0.5
+                color: Qt.alpha(root.cThemeAccent, 0.35)
             }
 
             RowLayout {
                 id: buttonsRow
+                visible: Plasmoid.configuration.showBarControls
                 spacing: 0
                 Layout.alignment: Qt.AlignVCenter
                 Layout.minimumWidth: implicitWidth
@@ -1349,6 +1372,30 @@ PlasmoidItem {
                 }
             }
         }
+
+        Rectangle {
+            id: barProgressTrack
+            visible: !bar.vertical && Plasmoid.configuration.showBarProgress
+                     && root.isActive && root.lengthMs > 0
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            anchors.leftMargin: bar.pad
+            anchors.rightMargin: bar.pad
+            height: 2
+            radius: 1
+            color: Qt.alpha(root.cThemeAccent, 0.20)
+
+            Rectangle {
+                width: parent.width * Math.max(0, Math.min(1, root.uiPosMs / root.lengthMs))
+                height: parent.height
+                radius: parent.radius
+                color: Qt.alpha(root.cActive, 0.75)
+                Behavior on width {
+                    NumberAnimation { duration: 250; easing.type: Easing.OutQuad }
+                }
+            }
+        }
     }
 
     fullRepresentation: Item {
@@ -1358,16 +1405,6 @@ PlasmoidItem {
         Layout.minimumWidth: Kirigami.Units.gridUnit * 16.5
         Layout.minimumHeight: Layout.preferredHeight
         Layout.maximumHeight: Layout.preferredHeight
-
-        Timer {
-            interval: 500
-            repeat: true
-            running: root.expanded && root.isPlaying
-            onTriggered: {
-                root.uiPosMs = root.nowMs();
-                if (!root.haveSynced) root.safeCall(["updatePosition"]);
-            }
-        }
 
         function fmt(ms) {
             var s = Math.max(0, Math.round(ms / 1000));

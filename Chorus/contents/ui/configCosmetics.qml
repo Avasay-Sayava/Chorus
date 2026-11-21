@@ -16,6 +16,9 @@ KCM.SimpleKCM {
     property double cfg_maxFrac
     property string cfg_activeColor
     property alias cfg_hideWhenIdle: hideIdleCheck.checked
+    property alias cfg_showCover: barCoverCheck.checked
+    property alias cfg_showBarControls: barControlsCheck.checked
+    property alias cfg_showBarProgress: barProgressCheck.checked
     property alias cfg_showPopupCover: popupCoverCheck.checked
     property alias cfg_showPopupTitle: popupTitleCheck.checked
     property alias cfg_showPopupArtist: popupArtistCheck.checked
@@ -228,6 +231,22 @@ KCM.SimpleKCM {
                         && /^#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(text))
                     page.cfg_activeColor = text
             }
+        }
+
+        Item { Kirigami.FormData.isSection: true }
+
+        QQC2.CheckBox {
+            id: barCoverCheck
+            Kirigami.FormData.label: i18n("Panel elements:")
+            text: i18n("Show album cover")
+        }
+        QQC2.CheckBox {
+            id: barControlsCheck
+            text: i18n("Show playback controls")
+        }
+        QQC2.CheckBox {
+            id: barProgressCheck
+            text: i18n("Show bottom progress line")
         }
 
         Item { Kirigami.FormData.isSection: true }

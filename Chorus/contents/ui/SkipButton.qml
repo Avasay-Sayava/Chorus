@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import org.kde.kirigami as Kirigami
 import org.kde.plasma.components as PC3
 
 // Previous and next track buttons
@@ -10,13 +11,28 @@ PC3.ToolButton {
     property real size: 24
     property color glyphColor: "white"
 
+    hoverEnabled: true
     Layout.preferredWidth: size
     Layout.preferredHeight: size
+
+    background: Rectangle {
+        anchors.centerIn: parent
+        width: btn.size * 0.88
+        height: width
+        radius: width / 2
+        color: Qt.alpha(Kirigami.Theme.highlightColor,
+                        btn.down ? 0.34 : (btn.hovered && btn.enabled ? 0.20 : 0.0))
+        border.width: (btn.hovered || btn.down) && btn.enabled ? 1 : 0
+        border.color: Qt.alpha(Kirigami.Theme.highlightColor, btn.down ? 0.50 : 0.32)
+        Behavior on color { ColorAnimation { duration: 140 } }
+    }
 
     contentItem: Item {
         implicitWidth: btn.size
         implicitHeight: btn.size
         opacity: btn.enabled ? 1.0 : 0.35
+        scale: btn.down ? 0.90 : (btn.hovered && btn.enabled ? 1.05 : 1.0)
+        Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
 
         readonly property real g: btn.size * 0.34
         readonly property real cx: width / 2
