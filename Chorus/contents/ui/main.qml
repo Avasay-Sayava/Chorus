@@ -777,11 +777,22 @@ PlasmoidItem {
             volBroken[volKeyFor(player)] = true;
         }
     }
+    property double savedVol: 0.5
     function changeVol(deltaPct) {
         if (!canSetVolume) return;
         var curPct = Math.round((player.volume || 0) * 100);
         var snapped = Math.round(curPct / 5) * 5;
         setVol01(Math.max(0, Math.min(100, snapped + deltaPct)) / 100);
+    }
+    function toggleMute() {
+        if (!canSetVolume) return;
+        var cur = Number(player.volume || 0);
+        if (cur > 0.005) {
+            savedVol = cur;
+            setVol01(0);
+        } else {
+            setVol01(savedVol > 0.01 ? savedVol : 0.5);
+        }
     }
     property double pendingSeekUs: -1
     Timer {
@@ -1603,46 +1614,103 @@ PlasmoidItem {
                     Layout.preferredHeight: Kirigami.Units.gridUnit
                     property bool dragging: false
                     property real dragRatio: 0
+                    property real hoverRatio: 0
                     property real dragLenMs: 0
                     readonly property real dragTargetMs: dragRatio * (dragLenMs > 0 ? dragLenMs : root.lengthMs)
                     readonly property real ratio: !root.isActive || root.lengthMs <= 0 ? 0
                         : Math.max(0, Math.min(1, dragging ? dragRatio : root.uiPosMs / root.lengthMs))
+                    readonly property real trackHeight: (seekMouse.containsMouse || dragging)
+                        ? Math.round(Kirigami.Units.smallSpacing * 1.4)
+                        : Kirigami.Units.smallSpacing
 
                     Rectangle {
                         anchors.verticalCenter: parent.verticalCenter
                         width: parent.width
-                        height: 4
-                        radius: 2
-                        color: Qt.alpha(root.cInactive, 0.45)
+                        height: seekBar.trackHeight
+                        radius: height / 2
+                        color: Qt.alpha(root.cThemeAccent, 0.28)
+                        Behavior on height { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+                    }
+                    Rectangle {
+                        visible: seekMouse.enabled && seekMouse.containsMouse && !seekBar.dragging && root.isActive
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: seekBar.hoverRatio * parent.width
+                        height: seekBar.trackHeight
+                        radius: height / 2
+                        color: Qt.alpha(root.cThemeAccent, 0.35)
+                        Behavior on height { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
                     }
                     Rectangle {
                         anchors.verticalCenter: parent.verticalCenter
                         width: seekBar.ratio * parent.width
-                        height: 4
-                        radius: 2
+                        height: seekBar.trackHeight
+                        radius: height / 2
                         color: root.cActive
+                        Behavior on height { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
                     }
                     Rectangle {
                         visible: root.isActive
+                        anchors.centerIn: seekThumb
+                        width: seekThumb.width + Kirigami.Units.smallSpacing * 2
+                        height: width
+                        radius: width / 2
+                        color: Qt.alpha(root.cThemeAccent, seekBar.dragging ? 0.38 : (seekMouse.containsMouse ? 0.24 : 0.0))
+                        Behavior on color { ColorAnimation { duration: 140 } }
+                    }
+                    Rectangle {
+                        id: seekThumb
+                        visible: root.isActive
                         anchors.verticalCenter: parent.verticalCenter
                         x: seekBar.ratio * (parent.width - width)
-                        width: 12
-                        height: 12
-                        radius: 6
+                        width: Kirigami.Units.smallSpacing * 3
+                        height: width
+                        radius: width / 2
                         color: root.cActive
+                        scale: seekBar.dragging ? 1.24 : (seekMouse.containsMouse ? 1.12 : 1.0)
+                        Behavior on scale { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+                    }
+                    Rectangle {
+                        id: seekPreviewPill
+                        visible: seekMouse.enabled && (seekMouse.containsMouse || seekBar.dragging)
+                        readonly property real targetRatio: seekBar.dragging ? seekBar.dragRatio : seekBar.hoverRatio
+                        x: Math.max(0, Math.min(parent.width - width, targetRatio * parent.width - width / 2))
+                        y: -height - Kirigami.Units.smallSpacing
+                        width: seekPreviewLabel.implicitWidth + Kirigami.Units.smallSpacing * 3
+                        height: seekPreviewLabel.implicitHeight + Kirigami.Units.smallSpacing * 1.2
+                        radius: height / 2
+                        color: Qt.alpha(root.cThemeBg, 0.90)
+                        border.width: 1
+                        border.color: Qt.alpha(root.cThemeAccent, 0.50)
+
+                        PC3.Label {
+                            id: seekPreviewLabel
+                            anchors.centerIn: parent
+                            textFormat: Text.PlainText
+                            text: popup.fmt(seekPreviewPill.targetRatio * (seekBar.dragLenMs > 0 ? seekBar.dragLenMs : root.lengthMs))
+                            color: root.cThemeText
+                            font.family: root.cfgFont
+                            font.pixelSize: Kirigami.Theme.smallFont.pixelSize
+                            font.weight: Font.Medium
+                        }
                     }
                     MouseArea {
+                        id: seekMouse
                         anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                         enabled: root.isActive && root.playerMatches && root.player.canSeek
                                  && root.lengthMs > 0
+                        onEntered: seekBar.hoverRatio = Math.max(0, Math.min(1, mouseX / width))
                         onPressed: function (mouse) {
                             seekBar.dragging = true;
                             seekBar.dragLenMs = root.lengthMs;
                             seekBar.dragRatio = Math.max(0, Math.min(1, mouse.x / width));
+                            seekBar.hoverRatio = seekBar.dragRatio;
                         }
                         onPositionChanged: function (mouse) {
+                            seekBar.hoverRatio = Math.max(0, Math.min(1, mouse.x / width));
                             if (seekBar.dragging)
-                                seekBar.dragRatio = Math.max(0, Math.min(1, mouse.x / width));
+                                seekBar.dragRatio = seekBar.hoverRatio;
                         }
                         onReleased: {
                             var target = seekBar.dragTargetMs;
@@ -1718,72 +1786,113 @@ PlasmoidItem {
             }
 
             // volume slider
-            RowLayout {
+            Rectangle {
                 Layout.fillWidth: true
-                Layout.leftMargin: Kirigami.Units.gridUnit * 2
-                Layout.rightMargin: Kirigami.Units.gridUnit * 2
+                Layout.leftMargin: Kirigami.Units.gridUnit * 0.5
+                Layout.rightMargin: Kirigami.Units.gridUnit * 0.5
+                implicitHeight: Kirigami.Units.gridUnit * 1.75
                 visible: Plasmoid.configuration.showVolumeBar && root.canSetVolume
-                spacing: Kirigami.Units.smallSpacing
+                radius: height / 2
+                color: Qt.alpha(root.cThemeBg, 0.45)
+                border.width: 1
+                border.color: Qt.alpha(root.cThemeAccent, 0.22)
 
-                Kirigami.Icon {
-                    readonly property real v: root.playerMatches && root.player.volume !== undefined ? root.player.volume : 0
-                    source: v <= 0.001 ? "audio-volume-muted"
-                          : v < 0.34 ? "audio-volume-low"
-                          : v < 0.67 ? "audio-volume-medium" : "audio-volume-high"
-                    color: root.cActive
-                    opacity: 0.75
-                    Layout.preferredWidth: Kirigami.Units.iconSizes.small
-                    Layout.preferredHeight: Kirigami.Units.iconSizes.small
-                }
-                Item {
-                    id: volBar
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: Kirigami.Units.gridUnit * 0.7
-                    readonly property real ratio: root.playerMatches && root.player.volume !== undefined
-                        ? Math.max(0, Math.min(1, root.player.volume)) : 0
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.leftMargin: Kirigami.Units.smallSpacing * 2
+                    anchors.rightMargin: Kirigami.Units.smallSpacing * 2
+                    spacing: Kirigami.Units.smallSpacing
 
-                    Rectangle {
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: parent.width
-                        height: 3
-                        radius: 1.5
-                        color: Qt.alpha(root.cInactive, 0.4)
-                    }
-                    Rectangle {
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: volBar.ratio * parent.width
-                        height: 3
-                        radius: 1.5
-                        color: Qt.alpha(root.cActive, 0.85)
-                    }
-                    Rectangle {
-                        anchors.verticalCenter: parent.verticalCenter
-                        x: volBar.ratio * (parent.width - width)
-                        width: 8
-                        height: 8
-                        radius: 4
-                        color: root.cActive
-                    }
-                    MouseArea {
-                        anchors.fill: parent
-                        onPressed: function (mouse) { root.setVol01(mouse.x / width); }
-                        onPositionChanged: function (mouse) { if (pressed) root.setVol01(mouse.x / width); }
-                        onWheel: function (wheel) {
-                            root.changeVol(wheel.angleDelta.y > 0 ? 5 : -5);
-                            wheel.accepted = true;
+                    Item {
+                        Layout.preferredWidth: Kirigami.Units.iconSizes.small
+                        Layout.preferredHeight: Kirigami.Units.iconSizes.small
+                        Kirigami.Icon {
+                            anchors.fill: parent
+                            readonly property real v: root.playerMatches && root.player.volume !== undefined ? root.player.volume : 0
+                            source: v <= 0.001 ? "audio-volume-muted"
+                                  : v < 0.34 ? "audio-volume-low"
+                                  : v < 0.67 ? "audio-volume-medium" : "audio-volume-high"
+                            color: root.cActive
+                            opacity: muteMouse.containsMouse ? 1.0 : 0.78
+                            Behavior on opacity { NumberAnimation { duration: 120 } }
+                        }
+                        MouseArea {
+                            id: muteMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.toggleMute()
                         }
                     }
-                }
-                PC3.Label {
-                    textFormat: Text.PlainText
-                    text: (root.playerMatches && root.player.volume !== undefined
-                           ? Math.round(root.player.volume * 100) : 0) + "%"
-                    color: root.cActive
-                    font.family: root.cfgFont
-                    font.pixelSize: Kirigami.Theme.smallFont.pixelSize
-                    opacity: 0.6
-                    horizontalAlignment: Text.AlignRight
-                    Layout.preferredWidth: Kirigami.Units.gridUnit * 1.6
+                    Item {
+                        id: volBar
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: Kirigami.Units.gridUnit
+                        readonly property real ratio: root.playerMatches && root.player.volume !== undefined
+                            ? Math.max(0, Math.min(1, root.player.volume)) : 0
+                        readonly property real trackHeight: (volMouse.containsMouse || volMouse.pressed)
+                            ? Math.round(Kirigami.Units.smallSpacing * 1.2)
+                            : Math.max(3, Math.round(Kirigami.Units.smallSpacing * 0.8))
+
+                        Rectangle {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: parent.width
+                            height: volBar.trackHeight
+                            radius: height / 2
+                            color: Qt.alpha(root.cThemeAccent, 0.28)
+                            Behavior on height { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+                        }
+                        Rectangle {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: volBar.ratio * parent.width
+                            height: volBar.trackHeight
+                            radius: height / 2
+                            color: Qt.alpha(root.cActive, 0.9)
+                            Behavior on height { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+                        }
+                        Rectangle {
+                            anchors.centerIn: volThumb
+                            width: volThumb.width + Kirigami.Units.smallSpacing * 1.8
+                            height: width
+                            radius: width / 2
+                            color: Qt.alpha(root.cThemeAccent, volMouse.pressed ? 0.38 : (volMouse.containsMouse ? 0.24 : 0.0))
+                            Behavior on color { ColorAnimation { duration: 140 } }
+                        }
+                        Rectangle {
+                            id: volThumb
+                            anchors.verticalCenter: parent.verticalCenter
+                            x: volBar.ratio * (parent.width - width)
+                            width: Kirigami.Units.smallSpacing * 2.2
+                            height: width
+                            radius: width / 2
+                            color: root.cActive
+                            scale: volMouse.pressed ? 1.25 : (volMouse.containsMouse ? 1.12 : 1.0)
+                            Behavior on scale { NumberAnimation { duration: 140; easing.type: Easing.OutCubic } }
+                        }
+                        MouseArea {
+                            id: volMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onPressed: function (mouse) { root.setVol01(mouse.x / width); }
+                            onPositionChanged: function (mouse) { if (pressed) root.setVol01(mouse.x / width); }
+                            onWheel: function (wheel) {
+                                root.changeVol(wheel.angleDelta.y > 0 ? 5 : -5);
+                                wheel.accepted = true;
+                            }
+                        }
+                    }
+                    PC3.Label {
+                        textFormat: Text.PlainText
+                        text: (root.playerMatches && root.player.volume !== undefined
+                               ? Math.round(root.player.volume * 100) : 0) + "%"
+                        color: root.cThemeText
+                        font.family: root.cfgFont
+                        font.pixelSize: Kirigami.Theme.smallFont.pixelSize
+                        opacity: 0.72
+                        horizontalAlignment: Text.AlignRight
+                        Layout.preferredWidth: Kirigami.Units.gridUnit * 2.2
+                    }
                 }
             }
 

@@ -24,3 +24,6 @@ Forked from [Netherizzium/Chorus](https://github.com/Netherizzium/Chorus).
 - **Centered Metadata Hierarchy & Margin Fixes**:
   - Improved outer popup margins and cover spacing (`18.5gu` width, balanced cover/glow clearance) so the ambient glow fits cleanly inside the popup.
   - Grouped the centered track title and `Artist · Album` subtitle, added an `Open <Player>` hover pill on the cover art, and removed the duplicate lyrics row from the popup window (synced lyrics stay on the panel bar).
+- **Refined Seek Bar & Glassy Volume Pill**:
+  - Added hover track preview, smooth track/thumb expansion with a theme-accent halo, and a floating timestamp preview pill while hovering or dragging the seek bar.
+  - Wrapped the volume slider in a wider theme-tinted glassy pill with a clickable mute/unmute speaker icon and matching animated thumb/track styling.
