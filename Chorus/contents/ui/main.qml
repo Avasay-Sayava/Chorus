@@ -1191,6 +1191,7 @@ PlasmoidItem {
             Item {
                 id: coverBox
                 visible: Plasmoid.configuration.showCover
+                Layout.leftMargin: Math.round(bar.pad * 0.75)
                 Layout.preferredWidth: bar.coverSize
                 Layout.minimumWidth: bar.coverSize
                 Layout.preferredHeight: bar.coverSize
@@ -1224,6 +1225,7 @@ PlasmoidItem {
 
             Rectangle {
                 visible: coverBox.visible
+                Layout.leftMargin: Math.round(bar.pad * 1.25)
                 Layout.preferredWidth: 1
                 Layout.preferredHeight: Math.round(bar.thick * 0.42)
                 Layout.alignment: Qt.AlignVCenter
@@ -1345,9 +1347,10 @@ PlasmoidItem {
             RowLayout {
                 id: buttonsRow
                 visible: Plasmoid.configuration.showBarControls
-                spacing: 0
+                spacing: -2
                 Layout.alignment: Qt.AlignVCenter
                 Layout.minimumWidth: implicitWidth
+                Layout.rightMargin: -Math.round(bar.pad * 1.75)
 
                 SkipButton {
                     forward: false
