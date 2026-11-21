@@ -1339,9 +1339,9 @@ PlasmoidItem {
 
     fullRepresentation: Item {
         id: popup
-        Layout.preferredWidth: Kirigami.Units.gridUnit * 17
-        Layout.preferredHeight: mainCol.implicitHeight + Kirigami.Units.gridUnit * 2
-        Layout.minimumWidth: Kirigami.Units.gridUnit * 15
+        Layout.preferredWidth: Kirigami.Units.gridUnit * 18.5
+        Layout.preferredHeight: mainCol.implicitHeight + Kirigami.Units.gridUnit * 2.6
+        Layout.minimumWidth: Kirigami.Units.gridUnit * 16.5
         Layout.minimumHeight: Layout.preferredHeight
         Layout.maximumHeight: Layout.preferredHeight
 
@@ -1365,7 +1365,7 @@ PlasmoidItem {
         ColumnLayout {
             id: mainCol
             anchors.centerIn: parent
-            width: parent.width - Kirigami.Units.gridUnit * 2
+            width: parent.width - Kirigami.Units.gridUnit * 2.4
             spacing: Kirigami.Units.smallSpacing * 2
 
             // search box
@@ -1392,6 +1392,8 @@ PlasmoidItem {
             Item {
                 id: bigCoverBox
                 Layout.alignment: Qt.AlignHCenter
+                Layout.topMargin: Kirigami.Units.smallSpacing * 1.5
+                Layout.bottomMargin: Kirigami.Units.smallSpacing * 2
                 Layout.preferredWidth: Kirigami.Units.gridUnit * 11
                 Layout.preferredHeight: Kirigami.Units.gridUnit * 11
                 scale: coverMouse.containsMouse ? 1.018 : 1.0
@@ -1405,7 +1407,7 @@ PlasmoidItem {
                     visible: bigCover.visible
                     autoPaddingEnabled: true
                     blurEnabled: true
-                    blurMax: 64
+                    blurMax: 44
                     blur: 1.0
                     saturation: 0.35
                     opacity: coverMouse.containsMouse ? 0.48 : 0.36
@@ -1463,6 +1465,41 @@ PlasmoidItem {
                     }
                 }
                 Rectangle {
+                    id: openHint
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.bottom: parent.bottom
+                    anchors.bottomMargin: Kirigami.Units.smallSpacing * 2
+                    readonly property string appLabel: (root.playerMatches && root.player && root.player.identity)
+                        ? root.player.identity
+                        : (root.searchAppName !== "" ? root.searchAppName : i18n("Player"))
+                    visible: root.hasTrack || root.searchAppName !== ""
+                    width: Math.min(openHintLabel.implicitWidth + Kirigami.Units.largeSpacing * 1.5,
+                                    parent.width - Kirigami.Units.largeSpacing)
+                    height: openHintLabel.implicitHeight + Kirigami.Units.smallSpacing * 1.4
+                    radius: height / 2
+                    color: Qt.rgba(0.10, 0.10, 0.10, 0.78)
+                    border.width: 1
+                    border.color: Qt.alpha(root.cActive, 0.18)
+                    opacity: coverMouse.containsMouse && volOverlay.opacity === 0 ? 1.0 : 0.0
+                    Behavior on opacity { NumberAnimation { duration: 150 } }
+
+                    Text {
+                        id: openHintLabel
+                        anchors.fill: parent
+                        anchors.leftMargin: Kirigami.Units.smallSpacing * 1.5
+                        anchors.rightMargin: Kirigami.Units.smallSpacing * 1.5
+                        textFormat: Text.PlainText
+                        text: i18n("Open %1", openHint.appLabel)
+                        elide: Text.ElideRight
+                        horizontalAlignment: Text.AlignHCenter
+                        verticalAlignment: Text.AlignVCenter
+                        color: root.cActive
+                        font.family: root.cfgFont
+                        font.pixelSize: Kirigami.Theme.smallFont.pixelSize
+                        font.weight: Font.Medium
+                    }
+                }
+                Rectangle {
                     id: volOverlay
                     anchors.fill: parent
                     radius: 12
@@ -1489,42 +1526,71 @@ PlasmoidItem {
                 }
             }
 
-            MarqueeText {
+            ColumnLayout {
                 Layout.fillWidth: true
-                text: root.dispTitle !== "" ? Lrc.normalize(root.dispTitle) : i18n("Nothing playing")
-                font.family: root.cfgFont
-                fontCss: root.cfgFontCss
-                font.pixelSize: Kirigami.Theme.defaultFont.pixelSize * 1.3
-                font.bold: true
-                color: root.cActive
-                scrolling: Plasmoid.configuration.marquee && root.expanded && root.winVisible
-            }
-            MarqueeText {
-                Layout.fillWidth: true
-                visible: root.isActive || root.optimistic !== null
-                text: root.dispArtist !== "" ? Lrc.normalize(root.dispArtist) : " "
-                color: root.cActive
-                textOpacity: 0.7
-                font.family: root.cfgFont
-                fontCss: root.cfgFontCss
-                scrolling: Plasmoid.configuration.marquee && root.expanded && root.winVisible
+                spacing: Math.round(Kirigami.Units.smallSpacing * 0.6)
+
+                MarqueeText {
+                    Layout.fillWidth: true
+                    text: root.dispTitle !== "" ? Lrc.normalize(root.dispTitle) : i18n("Nothing playing")
+                    font.family: root.cfgFont
+                    fontCss: root.cfgFontCss
+                    font.pixelSize: Kirigami.Theme.defaultFont.pixelSize * 1.3
+                    font.bold: true
+                    color: root.cActive
+                    scrolling: Plasmoid.configuration.marquee && root.expanded && root.winVisible
+                }
+                MarqueeText {
+                    Layout.fillWidth: true
+                    visible: root.isActive || root.optimistic !== null
+                    readonly property string subAlbum: root.optimistic === null ? Lrc.normalize(root.trackAlbum).trim() : ""
+                    readonly property string subArtist: Lrc.normalize(root.dispArtist).trim()
+                    readonly property string subTitleNorm: Lrc.normalize(root.dispTitle).trim()
+                    readonly property bool showAlbum: subAlbum !== ""
+                        && subAlbum.toLowerCase() !== subTitleNorm.toLowerCase()
+                        && subAlbum.toLowerCase() !== subArtist.toLowerCase()
+                    text: {
+                        if (subArtist !== "" && showAlbum) return subArtist + "  ·  " + subAlbum;
+                        if (subArtist !== "") return subArtist;
+                        if (showAlbum) return subAlbum;
+                        return " ";
+                    }
+                    color: root.cActive
+                    textOpacity: 0.7
+                    font.family: root.cfgFont
+                    fontCss: root.cfgFontCss
+                    scrolling: Plasmoid.configuration.marquee && root.expanded && root.winVisible
+                }
             }
 
-            MarqueeText {
-                Layout.fillWidth: true
+            Rectangle {
+                id: lyricBox
                 visible: root.isActive
-                Layout.preferredHeight: Kirigami.Units.gridUnit * 1.4
+                Layout.fillWidth: true
+                Layout.topMargin: Kirigami.Units.smallSpacing * 0.5
+                Layout.bottomMargin: Kirigami.Units.smallSpacing * 0.5
+                Layout.preferredHeight: Kirigami.Units.gridUnit * 1.75
+                radius: height / 2
                 readonly property bool showLyric: root.haveSynced && root.lineIdx >= 0
                                                   && root.lineIdx < root.lines.length && root.isPlaying
-                text: showLyric ? (root.lines[root.lineIdx].text || "♪")
-                    : (root.isActive && !root.haveSynced && !root.fetching && !lyricsFetchTimer.running ? i18n("No synced lyrics found") : " ")
-                font.family: root.cfgFont
-                fontCss: root.cfgFontCss
-                font.italic: showLyric
-                font.pixelSize: showLyric ? Kirigami.Theme.defaultFont.pixelSize : Kirigami.Theme.smallFont.pixelSize
-                color: root.cActive
-                textOpacity: showLyric ? 0.9 : 0.5
-                scrolling: Plasmoid.configuration.marquee && root.expanded && root.winVisible
+                color: Qt.alpha(root.cActive, showLyric ? 0.07 : 0.035)
+                border.width: 1
+                border.color: Qt.alpha(root.cActive, showLyric ? 0.12 : 0.06)
+
+                MarqueeText {
+                    anchors.fill: parent
+                    anchors.leftMargin: Kirigami.Units.largeSpacing
+                    anchors.rightMargin: Kirigami.Units.largeSpacing
+                    text: lyricBox.showLyric ? (root.lines[root.lineIdx].text || "♪")
+                        : (root.isActive && !root.haveSynced && !root.fetching && !lyricsFetchTimer.running ? i18n("No synced lyrics found") : " ")
+                    font.family: root.cfgFont
+                    fontCss: root.cfgFontCss
+                    font.italic: lyricBox.showLyric
+                    font.pixelSize: lyricBox.showLyric ? Kirigami.Theme.defaultFont.pixelSize : Kirigami.Theme.smallFont.pixelSize
+                    color: root.cActive
+                    textOpacity: lyricBox.showLyric ? 0.9 : 0.5
+                    scrolling: Plasmoid.configuration.marquee && root.expanded && root.winVisible
+                }
             }
 
             // song progress bar
