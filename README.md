@@ -27,3 +27,5 @@ Forked from [Netherizzium/Chorus](https://github.com/Netherizzium/Chorus).
 - **Refined Seek Bar & Glassy Volume Pill**:
   - Added hover track preview, smooth track/thumb expansion with a theme-accent halo, and a floating timestamp preview pill while hovering or dragging the seek bar.
   - Wrapped the volume slider in a wider theme-tinted glassy pill with a clickable mute/unmute speaker icon and matching animated thumb/track styling.
+- **Toggleable Popup Elements** (*Look & Feel* settings):
+  - Added individual toggles under **Popup elements** to show or hide the album cover, track title, artist, album name, synced lyrics pill (disabled by default), progress / seek bar, playback controls, and volume slider.

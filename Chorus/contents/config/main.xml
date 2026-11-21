@@ -41,6 +41,27 @@
     <entry name="showVolumeBar" type="Bool">
       <default>false</default>
     </entry>
+    <entry name="showPopupCover" type="Bool">
+      <default>true</default>
+    </entry>
+    <entry name="showPopupTitle" type="Bool">
+      <default>true</default>
+    </entry>
+    <entry name="showPopupArtist" type="Bool">
+      <default>true</default>
+    </entry>
+    <entry name="showPopupAlbum" type="Bool">
+      <default>true</default>
+    </entry>
+    <entry name="showPopupLyrics" type="Bool">
+      <default>false</default>
+    </entry>
+    <entry name="showPopupSeekBar" type="Bool">
+      <default>true</default>
+    </entry>
+    <entry name="showPopupControls" type="Bool">
+      <default>true</default>
+    </entry>
     <entry name="useCustomFont" type="Bool">
       <default>false</default>
     </entry>

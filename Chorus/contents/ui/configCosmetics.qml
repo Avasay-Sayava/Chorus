@@ -16,6 +16,13 @@ KCM.SimpleKCM {
     property double cfg_maxFrac
     property string cfg_activeColor
     property alias cfg_hideWhenIdle: hideIdleCheck.checked
+    property alias cfg_showPopupCover: popupCoverCheck.checked
+    property alias cfg_showPopupTitle: popupTitleCheck.checked
+    property alias cfg_showPopupArtist: popupArtistCheck.checked
+    property alias cfg_showPopupAlbum: popupAlbumCheck.checked
+    property alias cfg_showPopupLyrics: popupLyricsCheck.checked
+    property alias cfg_showPopupSeekBar: popupSeekBarCheck.checked
+    property alias cfg_showPopupControls: popupControlsCheck.checked
     property alias cfg_showVolumeBar: volumeCheck.checked
     property int cfg_lyricsOffsetMs
 
@@ -223,10 +230,40 @@ KCM.SimpleKCM {
             }
         }
 
+        Item { Kirigami.FormData.isSection: true }
+
+        QQC2.CheckBox {
+            id: popupCoverCheck
+            Kirigami.FormData.label: i18n("Popup elements:")
+            text: i18n("Show album cover")
+        }
+        QQC2.CheckBox {
+            id: popupTitleCheck
+            text: i18n("Show track title")
+        }
+        QQC2.CheckBox {
+            id: popupArtistCheck
+            text: i18n("Show artist")
+        }
+        QQC2.CheckBox {
+            id: popupAlbumCheck
+            text: i18n("Show album name")
+        }
+        QQC2.CheckBox {
+            id: popupLyricsCheck
+            text: i18n("Show synced lyrics")
+        }
+        QQC2.CheckBox {
+            id: popupSeekBarCheck
+            text: i18n("Show progress / seek bar")
+        }
+        QQC2.CheckBox {
+            id: popupControlsCheck
+            text: i18n("Show playback controls")
+        }
         QQC2.CheckBox {
             id: volumeCheck
-            Kirigami.FormData.label: i18n("Volume:")
-            text: i18n("Show volume slider in popup")
+            text: i18n("Show volume slider")
         }
         QQC2.Label {
             text: i18n("Tip: you can also scroll on the panel widget or the album cover in the popup to adjust the volume.")

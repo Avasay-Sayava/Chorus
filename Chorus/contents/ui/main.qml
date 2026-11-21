@@ -1405,6 +1405,7 @@ PlasmoidItem {
             // big cover
             Item {
                 id: bigCoverBox
+                visible: Plasmoid.configuration.showPopupCover
                 Layout.alignment: Qt.AlignHCenter
                 Layout.topMargin: Kirigami.Units.smallSpacing * 1.5
                 Layout.bottomMargin: Kirigami.Units.smallSpacing * 2
@@ -1550,10 +1551,13 @@ PlasmoidItem {
 
             ColumnLayout {
                 Layout.fillWidth: true
+                visible: titleMarquee.visible || subtitleMarquee.visible
                 spacing: Math.round(Kirigami.Units.smallSpacing * 0.6)
 
                 MarqueeText {
+                    id: titleMarquee
                     Layout.fillWidth: true
+                    visible: Plasmoid.configuration.showPopupTitle
                     text: root.dispTitle !== "" ? Lrc.normalize(root.dispTitle) : i18n("Nothing playing")
                     font.family: root.cfgFont
                     fontCss: root.cfgFontCss
@@ -1563,18 +1567,22 @@ PlasmoidItem {
                     scrolling: Plasmoid.configuration.marquee && root.expanded && root.winVisible
                 }
                 MarqueeText {
+                    id: subtitleMarquee
                     Layout.fillWidth: true
-                    visible: root.isActive || root.optimistic !== null
                     readonly property string subAlbum: root.optimistic === null ? Lrc.normalize(root.trackAlbum).trim() : ""
                     readonly property string subArtist: Lrc.normalize(root.dispArtist).trim()
                     readonly property string subTitleNorm: Lrc.normalize(root.dispTitle).trim()
-                    readonly property bool showAlbum: subAlbum !== ""
+                    readonly property bool hasDistinctAlbum: subAlbum !== ""
                         && subAlbum.toLowerCase() !== subTitleNorm.toLowerCase()
                         && subAlbum.toLowerCase() !== subArtist.toLowerCase()
+                    readonly property bool showArtistPart: Plasmoid.configuration.showPopupArtist && subArtist !== ""
+                    readonly property bool showAlbumPart: Plasmoid.configuration.showPopupAlbum && hasDistinctAlbum
+                    visible: (root.isActive || root.optimistic !== null)
+                        && (Plasmoid.configuration.showPopupArtist || Plasmoid.configuration.showPopupAlbum)
                     text: {
-                        if (subArtist !== "" && showAlbum) return subArtist + "  ·  " + subAlbum;
-                        if (subArtist !== "") return subArtist;
-                        if (showAlbum) return subAlbum;
+                        if (showArtistPart && showAlbumPart) return subArtist + "  ·  " + subAlbum;
+                        if (showArtistPart) return subArtist;
+                        if (showAlbumPart) return subAlbum;
                         return " ";
                     }
                     color: root.cActive
@@ -1585,9 +1593,41 @@ PlasmoidItem {
                 }
             }
 
+            // synced lyrics pill
+            Rectangle {
+                id: lyricBox
+                visible: Plasmoid.configuration.showPopupLyrics && root.isActive
+                Layout.fillWidth: true
+                Layout.topMargin: Kirigami.Units.smallSpacing * 0.5
+                Layout.bottomMargin: Kirigami.Units.smallSpacing * 0.5
+                Layout.preferredHeight: Kirigami.Units.gridUnit * 1.75
+                radius: height / 2
+                readonly property bool showLyric: root.haveSynced && root.lineIdx >= 0
+                                                  && root.lineIdx < root.lines.length && root.isPlaying
+                color: Qt.alpha(root.cThemeBg, 0.45)
+                border.width: 1
+                border.color: Qt.alpha(root.cThemeAccent, showLyric ? 0.35 : 0.18)
+
+                MarqueeText {
+                    anchors.fill: parent
+                    anchors.leftMargin: Kirigami.Units.largeSpacing
+                    anchors.rightMargin: Kirigami.Units.largeSpacing
+                    text: lyricBox.showLyric ? (root.lines[root.lineIdx].text || "♪")
+                        : (root.isActive && !root.haveSynced && !root.fetching && !lyricsFetchTimer.running ? i18n("No synced lyrics found") : " ")
+                    font.family: root.cfgFont
+                    fontCss: root.cfgFontCss
+                    font.italic: lyricBox.showLyric
+                    font.pixelSize: lyricBox.showLyric ? Kirigami.Theme.defaultFont.pixelSize : Kirigami.Theme.smallFont.pixelSize
+                    color: root.cActive
+                    textOpacity: lyricBox.showLyric ? 0.9 : 0.5
+                    scrolling: Plasmoid.configuration.marquee && root.expanded && root.winVisible
+                }
+            }
+
             // song progress bar
             RowLayout {
                 Layout.fillWidth: true
+                visible: Plasmoid.configuration.showPopupSeekBar
                 spacing: Kirigami.Units.smallSpacing
 
                 TextMetrics {
@@ -1737,6 +1777,7 @@ PlasmoidItem {
             // control buttons
             RowLayout {
                 Layout.alignment: Qt.AlignHCenter
+                visible: Plasmoid.configuration.showPopupControls
                 spacing: Kirigami.Units.largeSpacing
 
                 GlyphButton {
