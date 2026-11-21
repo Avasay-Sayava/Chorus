@@ -16,3 +16,5 @@ Forked from [Netherizzium/Chorus](https://github.com/Netherizzium/Chorus).
   - Corrects initial playback offsets `>= 120ms` on the first MPRIS position report and lowers the ongoing drift deadband from `750ms` to `120ms` (`1500ms` drift check interval).
 - **Lyrics Source Configuration** (*Music App* settings):
   - Added a **Lyrics source** selector (`Automatic (Spotify / Musixmatch, then LRCLIB)`, `Musixmatch (Spotify provider)`, or `LRCLIB`) and an optional custom Musixmatch token field.
+- **Cleaner Panel Expansion**:
+  - Removed the Plasma panel active-tab highlight line above the bar widget when opening the Chorus popup window.

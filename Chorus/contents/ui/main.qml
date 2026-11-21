@@ -1017,7 +1017,24 @@ PlasmoidItem {
         id: bar
 
         property bool activeSticky: false
-        Component.onCompleted: activeSticky = root.isActive
+        function hideExpandedLine() {
+            var p = bar.parent;
+            while (p) {
+                if (p.expandedFeedback !== undefined && p.expandedFeedback !== null) {
+                    var fb = p.expandedFeedback;
+                    fb.visible = false;
+                    fb.opacity = 0;
+                    fb.imagePath = "";
+                    break;
+                }
+                p = p.parent;
+            }
+        }
+        onParentChanged: hideExpandedLine()
+        Component.onCompleted: {
+            activeSticky = root.isActive;
+            hideExpandedLine();
+        }
         Timer {
             id: idleDelay
             interval: 2500
@@ -1026,6 +1043,7 @@ PlasmoidItem {
         }
         Connections {
             target: root
+            function onExpandedChanged() { bar.hideExpandedLine(); }
             function onIsActiveChanged() {
                 if (root.isActive) {
                     idleDelay.stop();
