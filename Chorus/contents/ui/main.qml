@@ -1390,9 +1390,40 @@ PlasmoidItem {
 
             // big cover
             Item {
+                id: bigCoverBox
                 Layout.alignment: Qt.AlignHCenter
                 Layout.preferredWidth: Kirigami.Units.gridUnit * 11
                 Layout.preferredHeight: Kirigami.Units.gridUnit * 11
+                scale: coverMouse.containsMouse ? 1.018 : 1.0
+                Behavior on scale {
+                    NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
+                }
+
+                MultiEffect {
+                    anchors.fill: bigCover
+                    source: bigCover
+                    visible: bigCover.visible
+                    autoPaddingEnabled: true
+                    blurEnabled: true
+                    blurMax: 64
+                    blur: 1.0
+                    saturation: 0.35
+                    opacity: coverMouse.containsMouse ? 0.48 : 0.36
+                    Behavior on opacity {
+                        NumberAnimation { duration: 220; easing.type: Easing.OutQuad }
+                    }
+                }
+
+                MultiEffect {
+                    anchors.fill: bigCover
+                    source: bigCover
+                    visible: bigCover.visible
+                    autoPaddingEnabled: true
+                    shadowEnabled: true
+                    shadowBlur: 0.85
+                    shadowVerticalOffset: 6
+                    shadowColor: Qt.rgba(0, 0, 0, 0.52)
+                }
 
                 CoverImage {
                     id: bigCover
@@ -1400,7 +1431,16 @@ PlasmoidItem {
                     src: root.dispArt
                     px: 512
                     radius: 12
+                    layer.enabled: true
                     visible: root.dispArt != "" && !bigCover.failed
+                }
+                Rectangle {
+                    anchors.fill: bigCover
+                    radius: 12
+                    color: "transparent"
+                    border.width: 1
+                    border.color: Qt.alpha(root.cActive, 0.14)
+                    visible: bigCover.visible
                 }
                 Kirigami.Icon {
                     anchors.fill: parent
@@ -1410,7 +1450,9 @@ PlasmoidItem {
                     opacity: 0.5
                 }
                 MouseArea {
+                    id: coverMouse
                     anchors.fill: parent
+                    hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     onClicked: root.doRaise()
                     onWheel: function (wheel) {

@@ -18,3 +18,5 @@ Forked from [Netherizzium/Chorus](https://github.com/Netherizzium/Chorus).
   - Added a **Lyrics source** selector (`Automatic (Spotify / Musixmatch, then LRCLIB)`, `Musixmatch (Spotify provider)`, or `LRCLIB`) and an optional custom Musixmatch token field.
 - **Cleaner Panel Expansion**:
   - Removed the Plasma panel active-tab highlight line above the bar widget when opening the Chorus popup window.
+- **Popup Album Cover Glow & Elevation**:
+  - Added an ambient blurred album-art glow, soft drop shadow, subtle glass rim border, and gentle hover lift on the popup cover art.
