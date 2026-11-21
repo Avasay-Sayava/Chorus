@@ -692,7 +692,7 @@ PlasmoidItem {
         id: uiPosTimer
         interval: 500
         repeat: true
-        running: (root.expanded || (Plasmoid.configuration.showBarProgress && root.winVisible)) && root.isPlaying
+        running: root.expanded && root.isPlaying
         onTriggered: {
             root.uiPosMs = root.nowMs();
             if (!root.haveSynced) root.safeCall(["updatePosition"]);
@@ -1369,30 +1369,6 @@ PlasmoidItem {
                     glyphColor: root.cActive
                     enabled: root.playerMatches && root.trackTitle !== "" && root.player.canGoNext
                     onClicked: root.doNext()
-                }
-            }
-        }
-
-        Rectangle {
-            id: barProgressTrack
-            visible: !bar.vertical && Plasmoid.configuration.showBarProgress
-                     && root.isActive && root.lengthMs > 0
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.bottom: parent.bottom
-            anchors.leftMargin: bar.pad
-            anchors.rightMargin: bar.pad
-            height: 2
-            radius: 1
-            color: Qt.alpha(root.cThemeAccent, 0.20)
-
-            Rectangle {
-                width: parent.width * Math.max(0, Math.min(1, root.uiPosMs / root.lengthMs))
-                height: parent.height
-                radius: parent.radius
-                color: Qt.alpha(root.cActive, 0.75)
-                Behavior on width {
-                    NumberAnimation { duration: 250; easing.type: Easing.OutQuad }
                 }
             }
         }

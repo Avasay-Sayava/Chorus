@@ -18,7 +18,6 @@ KCM.SimpleKCM {
     property alias cfg_hideWhenIdle: hideIdleCheck.checked
     property alias cfg_showCover: barCoverCheck.checked
     property alias cfg_showBarControls: barControlsCheck.checked
-    property alias cfg_showBarProgress: barProgressCheck.checked
     property alias cfg_showPopupCover: popupCoverCheck.checked
     property alias cfg_showPopupTitle: popupTitleCheck.checked
     property alias cfg_showPopupArtist: popupArtistCheck.checked
@@ -243,10 +242,6 @@ KCM.SimpleKCM {
         QQC2.CheckBox {
             id: barControlsCheck
             text: i18n("Show playback controls")
-        }
-        QQC2.CheckBox {
-            id: barProgressCheck
-            text: i18n("Show bottom progress line")
         }
 
         Item { Kirigami.FormData.isSection: true }

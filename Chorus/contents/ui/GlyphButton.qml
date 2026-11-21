@@ -20,7 +20,7 @@ PC3.ToolButton {
         anchors.centerIn: parent
         width: btn.size * 0.88
         height: width
-        radius: width / 2
+        radius: Math.max(4, Math.round(width * 0.22))
         color: Qt.alpha(Kirigami.Theme.highlightColor,
                         btn.down ? 0.38 : (btn.hovered && btn.enabled ? 0.24 : (btn.active ? 0.14 : 0.0)))
         border.width: ((btn.hovered || btn.down) && btn.enabled) || btn.active ? 1 : 0
