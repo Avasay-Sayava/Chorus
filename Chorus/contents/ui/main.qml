@@ -1563,36 +1563,6 @@ PlasmoidItem {
                 }
             }
 
-            Rectangle {
-                id: lyricBox
-                visible: root.isActive
-                Layout.fillWidth: true
-                Layout.topMargin: Kirigami.Units.smallSpacing * 0.5
-                Layout.bottomMargin: Kirigami.Units.smallSpacing * 0.5
-                Layout.preferredHeight: Kirigami.Units.gridUnit * 1.75
-                radius: height / 2
-                readonly property bool showLyric: root.haveSynced && root.lineIdx >= 0
-                                                  && root.lineIdx < root.lines.length && root.isPlaying
-                color: Qt.alpha(root.cActive, showLyric ? 0.07 : 0.035)
-                border.width: 1
-                border.color: Qt.alpha(root.cActive, showLyric ? 0.12 : 0.06)
-
-                MarqueeText {
-                    anchors.fill: parent
-                    anchors.leftMargin: Kirigami.Units.largeSpacing
-                    anchors.rightMargin: Kirigami.Units.largeSpacing
-                    text: lyricBox.showLyric ? (root.lines[root.lineIdx].text || "♪")
-                        : (root.isActive && !root.haveSynced && !root.fetching && !lyricsFetchTimer.running ? i18n("No synced lyrics found") : " ")
-                    font.family: root.cfgFont
-                    fontCss: root.cfgFontCss
-                    font.italic: lyricBox.showLyric
-                    font.pixelSize: lyricBox.showLyric ? Kirigami.Theme.defaultFont.pixelSize : Kirigami.Theme.smallFont.pixelSize
-                    color: root.cActive
-                    textOpacity: lyricBox.showLyric ? 0.9 : 0.5
-                    scrolling: Plasmoid.configuration.marquee && root.expanded && root.winVisible
-                }
-            }
-
             // song progress bar
             RowLayout {
                 Layout.fillWidth: true

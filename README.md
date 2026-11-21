@@ -20,6 +20,6 @@ Forked from [Netherizzium/Chorus](https://github.com/Netherizzium/Chorus).
   - Removed the Plasma panel active-tab highlight line above the bar widget when opening the Chorus popup window.
 - **Popup Album Cover Glow & Elevation**:
   - Added an ambient blurred album-art glow, soft drop shadow, subtle glass rim border, and gentle hover lift on the popup cover art.
-- **Centered Metadata Hierarchy, Lyric Pill & Margin Fixes**:
+- **Centered Metadata Hierarchy & Margin Fixes**:
   - Improved outer popup margins and cover spacing (`18.5gu` width, balanced cover/glow clearance) so the ambient glow fits cleanly inside the popup.
-  - Grouped the centered track title and `Artist · Album` subtitle, wrapped the centered active lyric line in a subtle rounded pill, and added an `Open <Player>` hover pill on the cover art.
+  - Grouped the centered track title and `Artist · Album` subtitle, added an `Open <Player>` hover pill on the cover art, and removed the duplicate lyrics row from the popup window (synced lyrics stay on the panel bar).
